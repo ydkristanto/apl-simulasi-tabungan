@@ -92,6 +92,22 @@ ui <- page_navbar(
   ),
   ## Konten utama ----
   nav_panel(
+    ### Deposito ----
+    "Deposito",
+    layout_columns(
+      uiOutput("kotak_hitungan_dep"),
+      uiOutput("kotak_periode_dep"),
+      uiOutput("kotak_bunga_dep"),
+      uiOutput("kotak_total_dep"),
+      card(
+        tableOutput("tabel_data_dep")
+      ),
+      col_widths = c(3, 3, 3, 3, 12),
+      row_heights = c(1.75, 3)
+    )
+  ),
+  nav_panel(
+    ### Tabungan berjangka ----
     "Tabungan Berjangka",
     layout_columns(
       uiOutput("kotak_setoran"),
@@ -104,6 +120,9 @@ ui <- page_navbar(
       col_widths = c(3, 3, 3, 3, 12),
       row_heights = c(1.75, 3)
     )
+  ),
+  nav_panel(
+    "Informasi"
   ),
   nav_spacer(),
   nav_menu(
