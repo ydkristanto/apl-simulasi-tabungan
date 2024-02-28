@@ -5,9 +5,24 @@ library(tidyverse)
 library(knitr)
 library(kableExtra)
 
+# Tautan ----
+tautan_apl_lain <- tags$a(
+  shiny::icon("shapes"),
+  "Lainnya",
+  href = "https://people.usd.ac.id/~ydkristanto/index.php/media-pengajaran/",
+  target = "_blank"
+)
+tautan_github <- tags$a(
+  shiny::icon("github"),
+  "Github",
+  href = "https://github.com/ydkristanto/apl-simulasi-tabungan",
+  target = "_blank"
+)
+
 # Antarmuka ----
-ui <- page_sidebar(
+ui <- page_navbar(
   title = "Simulasi Tabungan",
+  id = "simulasi_tabungan",
   ## Sidebar ----
   sidebar = sidebar(
     selectInput(
@@ -76,16 +91,27 @@ ui <- page_sidebar(
     )
   ),
   ## Konten utama ----
-  layout_columns(
-    uiOutput("kotak_setoran"),
-    uiOutput("kotak_periode"),
-    uiOutput("kotak_bunga"),
-    uiOutput("kotak_total"),
-    card(
-      tableOutput("tabel_data")
-    ),
-    col_widths = c(3, 3, 3, 3, 12),
-    row_heights = c(1.5, 3)
+  nav_panel(
+    "Tabungan Berjangka",
+    layout_columns(
+      uiOutput("kotak_setoran"),
+      uiOutput("kotak_periode"),
+      uiOutput("kotak_bunga"),
+      uiOutput("kotak_total"),
+      card(
+        tableOutput("tabel_data")
+      ),
+      col_widths = c(3, 3, 3, 3, 12),
+      row_heights = c(1.75, 3)
+    )
+  ),
+  nav_spacer(),
+  nav_menu(
+    title = "Tautan",
+    nav_item(tautan_apl_lain),
+    nav_item(tautan_github),
+    icon = shiny::icon("link"),
+    align = "right"
   )
 )
 
@@ -96,17 +122,21 @@ server <- function(input, output, session) {
     jenis_simulasi <- input$jenis_simulasi
     R <- input$setor_bulanan
     n <- input$periode
-    i <- input$bunga / 12
+    i <- input$bunga / (12 * 100)
     A <- input$total
-    warna_latar <- if (jenis_simulasi == "periode") {
-      "primary"
+    if (jenis_simulasi == "periode") {
+      warna_latar <- "primary"
     } else {
-      "secondary"
+      warna_latar <- "secondary"
     }
-    nilai_periode <- if (jenis_simulasi == "periode") {
-      round(log((A * i + R) / R, base = 1 + i), 1)
+    if (jenis_simulasi == "periode") {
+      nilai_periode <- ifelse(
+        i != 0,
+        round(log((A * i + R) / R, base = 1 + i), 1),
+        A / R
+      )
     } else {
-      n
+      nilai_periode <- n
     }
 
     value_box(
@@ -151,7 +181,7 @@ server <- function(input, output, session) {
     } else {
       "juta rupiah"
     }
-    
+
     value_box(
       title = "Setoran Bulanan",
       value = format(
@@ -188,7 +218,7 @@ server <- function(input, output, session) {
     } else {
       "secondary"
     }
-    nilai_total <- if(jenis_simulasi == "total") {
+    nilai_total <- if (jenis_simulasi == "total") {
       R * ((1 + i)^n - 1) / i
     } else {
       A
@@ -235,14 +265,95 @@ server <- function(input, output, session) {
       theme = warna_latar
     )
   })
-  ## Awal tabel_data
-  table_data <- reactiveVal(
+  ## Awal tabel_data ----
+  tabel_data <- reactiveVal(
     tibble(
-      periode = numeric(),
-      setoran = numeric(),
-      bunga = numeric(),
-      total = numeric()
+      `Periode (Bulan)` = character(),
+      `Setoran Bulanan (Rp)` = character(),
+      `Bunga Per Tahun (%)` = character(),
+      `Total (Rp)` = character()
     )
+  )
+  
+  ## Membuat baris tabel ----
+  observeEvent(input$simpan, {
+    jenis_simulasi <- input$jenis_simulasi
+    R <- input$setor_bulanan
+    n <- input$periode
+    i <- input$bunga / (12 * 100)
+    A <- input$total
+    if (jenis_simulasi == "periode") {
+      nilai_periode <- ifelse(
+        i != 0,
+        ceiling(log((A * i + R) / R, base = 1 + i)),
+        A / R
+      )
+      nilai_setoran <- R
+      nilai_bunga <- 1200 * i
+      nilai_total <- A
+    } else if (jenis_simulasi == "setor_bulanan") {
+      nilai_setoran <- round(A * i / ((1 + i)^n - 1), 2)
+      nilai_periode <- n
+      nilai_bunga <- 1200 * i
+      nilai_total <- A
+    } else {
+      nilai_total <- round(R * ((1 + i)^n - 1) / i, 2)
+      nilai_periode <- n
+      nilai_setoran <- R
+      nilai_bunga <- 1200 * i
+    }
+    tabel_data() %>%
+      add_row(
+        `Periode (Bulan)` = formatC(
+          nilai_periode,
+          big.mark = ".",
+          decimal.mark = ","
+        ),
+        `Setoran Bulanan (Rp)` = formatC(
+          nilai_setoran,
+          big.mark = ".",
+          decimal.mark = ",",
+          format = "f",
+          digits = 2
+        ),
+        `Bunga Per Tahun (%)` = formatC(
+          nilai_bunga,
+          big.mark = ".",
+          decimal.mark = ",",
+          format = "f",
+          digits = 1
+        ),
+        `Total (Rp)` = formatC(
+          nilai_total,
+          big.mark = ".",
+          decimal.mark = ",",
+          format = "f",
+          digits = 2
+        )
+      ) %>%
+      tabel_data()
+  })
+  
+  ## Menghapus semua baris tabel ----
+  observeEvent(input$hapus, {
+    tabel_data(
+      tibble(
+        `Periode (Bulan)` = character(),
+        `Setoran Bulanan (Rp)` = character(),
+        `Bunga Per Tahun (%)` = character(),
+        `Total (Rp)` = character()
+      )
+    )
+  })
+  
+  ## Luaran tabel_data ----
+  output$tabel_data <- renderTable(
+    tabel_data(),
+    striped = TRUE,
+    hover = TRUE,
+    rownames = TRUE,
+    align = "r",
+    width = "100%"
   )
 }
 
