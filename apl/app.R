@@ -763,8 +763,17 @@ server <- function(input, output, session) {
     y <- as.character(input$sumbu_y_dep)
     tabel_data_dep() %>%
       ggplot(aes(.data[[x]], .data[[y]])) +
-      geom_point(size = 3) +
-      theme_bw(base_size = 14)
+      geom_point(
+        size = 5,
+        alpha = .6
+      ) +
+      theme_bw(base_size = 14) +
+      theme(
+        plot.title = element_text(face = "bold")
+      ) +
+      labs(
+        title = paste0("Hubungan Antara ", x, " dan ", y)
+      )
   })
 
   ## Tabungan berjangka ----
@@ -1020,8 +1029,17 @@ server <- function(input, output, session) {
     y <- as.character(input$sumbu_y)
     tabel_data() %>%
       ggplot(aes(.data[[x]], .data[[y]])) +
-      geom_point(size = 3) +
-      theme_bw(base_size = 14)
+      geom_point(
+        size = 5,
+        alpha = .6
+      ) +
+      theme_bw(base_size = 14) +
+      theme(
+        plot.title = element_text(face = "bold")
+      ) +
+      labs(
+        title = paste0("Hubungan Antara ", x, " dan ", y)
+      )
   })
 }
 
