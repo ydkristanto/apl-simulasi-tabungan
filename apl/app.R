@@ -2,7 +2,51 @@
 library(shiny)
 library(bslib)
 library(tidyverse)
+library(ggthemes)
 options(shiny.mathjax.url = "https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/MathJax.js")
+# Fungsi tema ----
+theme_Publication <- function(base_size = 14, base_family = "sans") {
+  (theme_foundation(base_size = base_size, base_family = base_family)
+    + theme(
+      plot.title = element_text(
+        face = "bold",
+        size = rel(1.2), hjust = 0.5, margin = margin(0, 0, 20, 0)
+      ),
+      text = element_text(),
+      panel.background = element_rect(colour = NA),
+      plot.background = element_rect(colour = NA),
+      panel.border = element_rect(colour = NA),
+      axis.title = element_text(face = "bold", size = rel(1)),
+      axis.title.y = element_text(angle = 90, vjust = 2),
+      axis.title.x = element_text(vjust = -0.2),
+      axis.text = element_text(),
+      axis.line.x = element_line(colour = "black"),
+      axis.line.y = element_line(colour = "black"),
+      axis.ticks = element_line(),
+      panel.grid.major = element_line(colour = "#f0f0f0"),
+      panel.grid.minor = element_blank(),
+      legend.key = element_rect(colour = NA),
+      legend.position = "bottom",
+      legend.direction = "horizontal",
+      legend.box = "vetical",
+      legend.key.size = unit(0.5, "cm"),
+      # legend.margin = unit(0, "cm"),
+      legend.title = element_text(face = "italic"),
+      plot.margin = unit(c(10, 5, 5, 5), "mm"),
+      strip.background = element_rect(colour = "#f0f0f0", fill = "#f0f0f0"),
+      strip.text = element_text(face = "bold")
+    ))
+}
+
+scale_fill_Publication <- function(...) {
+  library(scales)
+  discrete_scale("fill", "Publication", manual_pal(values = c("#386cb0", "#f87f01", "#7fc97f", "#ef3b2c", "#feca01", "#a6cee3", "#fb9a99", "#984ea3", "#8C591D")), ...)
+}
+
+scale_colour_Publication <- function(...) {
+  library(scales)
+  discrete_scale("colour", "Publication", manual_pal(values = c("#386cb0", "#f87f01", "#7fc97f", "#ef3b2c", "#feca01", "#a6cee3", "#fb9a99", "#984ea3", "#8C591D")), ...)
+}
 
 # Tautan ----
 tautan_apl_lain <- tags$a(
@@ -69,7 +113,7 @@ ui <- page_navbar(
         sliderInput(
           "periode_dep",
           div("Periode (Tahun)", style = "font-weight: bold;"),
-          min = 1,
+          min = 0,
           max = 50,
           value = 10,
           step = 1,
@@ -146,7 +190,7 @@ ui <- page_navbar(
         sliderInput(
           "periode",
           div("Periode (Bulan)", style = "font-weight: bold;"),
-          min = 1,
+          min = 0,
           max = 60,
           value = 24,
           step = 1,
@@ -230,21 +274,17 @@ ui <- page_navbar(
         "kotak_total_dep",
         fill = TRUE
       ),
-      card(
-        card_header(
-          "Data Tersimpan",
-          popover(
-            trigger = icon("gear"),
-            title = "Pengaturan Tampilan",
-            selectInput(
-              "tampilan_dep",
-              "Tampilkan:",
-              choices = c("Tabel", "Grafik"),
-              selected = "Tabel"
-            ),
-            conditionalPanel(
-              "input.tampilan_dep == 'Grafik'",
-              hr(),
+      navset_card_underline(
+        nav_panel(
+          "Tabel",
+          tableOutput("tabel_data_dep")
+        ),
+        nav_panel(
+          title = div(
+            "Grafik  ",
+            popover(
+              trigger = icon("gear"),
+              title = "Pengaturan Tampilan",
               selectInput(
                 "sumbu_x_dep",
                 "Sumbu x:",
@@ -266,25 +306,16 @@ ui <- page_navbar(
                   "Total (Rp)"
                 ),
                 selected = "Total (Rp)"
-              )
-            ),
-            placement = c("auto")
-          ),
-          class = "d-flex justify-content-between"
-        ),
-        card_body(
-          conditionalPanel(
-            "input.tampilan_dep == 'Tabel'",
-            tableOutput("tabel_data_dep")
-          ),
-          conditionalPanel(
-            "input.tampilan_dep == 'Grafik'",
-            plotOutput(
-              "grafik_data_dep",
-              fill = TRUE
+              ),
+              placement = c("auto")
             )
+          ),
+          plotOutput(
+            "grafik_data_dep",
+            fill = TRUE
           )
-        )
+        ),
+        full_screen = TRUE
       ),
       col_widths = c(3, 3, 3, 3, 12),
       row_heights = c(1, 3)
@@ -310,21 +341,17 @@ ui <- page_navbar(
         "kotak_total",
         fill = TRUE
       ),
-      card(
-        card_header(
-          "Data Tersimpan",
-          popover(
-            trigger = icon("gear"),
-            title = "Pengaturan Tampilan",
-            selectInput(
-              "tampilan",
-              "Tampilkan:",
-              choices = c("Tabel", "Grafik"),
-              selected = "Tabel"
-            ),
-            conditionalPanel(
-              "input.tampilan == 'Grafik'",
-              hr(),
+      navset_card_underline(
+        nav_panel(
+          "Tabel",
+          tableOutput("tabel_data")
+        ),
+        nav_panel(
+          title = div(
+            "Grafik  ",
+            popover(
+              trigger = icon("gear"),
+              title = "Pengaturan Tampilan",
               selectInput(
                 "sumbu_x",
                 "Sumbu x:",
@@ -346,25 +373,16 @@ ui <- page_navbar(
                   "Total (Rp)"
                 ),
                 selected = "Total (Rp)"
-              )
-            ),
-            placement = c("auto")
-          ),
-          class = "d-flex justify-content-between"
-        ),
-        card_body(
-          conditionalPanel(
-            "input.tampilan == 'Tabel'",
-            tableOutput("tabel_data")
-          ),
-          conditionalPanel(
-            "input.tampilan == 'Grafik'",
-            plotOutput(
-              "grafik_data",
-              fill = TRUE
+              ),
+              placement = c("auto")
             )
+          ),
+          plotOutput(
+            "grafik_data",
+            fill = TRUE
           )
-        )
+        ),
+        full_screen = TRUE
       ),
       col_widths = c(3, 3, 3, 3, 12),
       row_heights = c(1, 3)
@@ -407,7 +425,7 @@ ui <- page_navbar(
           p("Misalkan seorang nasabah memberikan setoran awal sejumlah \\(P\\) kepada bank yang memberikan bunga \\(r\\) per tahunnya dan dihitung \\(n\\) kali setiap tahunnya. Dalam jangka waktu \\(t\\) tahun, jumlah tabungannya dapat dihitung dengan menggunakan rumus berikut."),
           p("$$A(t)=P\\left(1+\\frac{r}{n}\\right)^{nt}$$"),
           p("Ketika penghitungan bunga dilakukan secara kontinu (\\(n\\) mendekati tak hingga), rumusnya menjadi seperti berikut."),
-          p("$$A(t)=Pe^{rt}$$")
+          p("$$A(t)=Pe^{rt}$$dengan \\(e\\) adalah sebuah konstanta matematis yang nilainya kurang lebih sama dengan 2,718282.")
         ),
         nav_panel(
           title = "Tabungan Berjangka",
@@ -765,12 +783,9 @@ server <- function(input, output, session) {
       ggplot(aes(.data[[x]], .data[[y]])) +
       geom_point(
         size = 5,
-        alpha = .6
+        color = "#386cb0"
       ) +
-      theme_bw(base_size = 14) +
-      theme(
-        plot.title = element_text(face = "bold")
-      ) +
+      theme_Publication() +
       labs(
         title = paste0("Hubungan Antara ", x, " dan ", y)
       )
@@ -1031,12 +1046,9 @@ server <- function(input, output, session) {
       ggplot(aes(.data[[x]], .data[[y]])) +
       geom_point(
         size = 5,
-        alpha = .6
+        color = "#386cb0"
       ) +
-      theme_bw(base_size = 14) +
-      theme(
-        plot.title = element_text(face = "bold")
-      ) +
+      theme_Publication() +
       labs(
         title = paste0("Hubungan Antara ", x, " dan ", y)
       )
