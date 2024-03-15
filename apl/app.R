@@ -2,51 +2,7 @@
 library(shiny)
 library(bslib)
 library(tidyverse)
-library(ggthemes)
 options(shiny.mathjax.url = "https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/MathJax.js")
-# Fungsi tema ----
-theme_Publication <- function(base_size = 14, base_family = "sans") {
-  (theme_foundation(base_size = base_size, base_family = base_family)
-    + theme(
-      plot.title = element_text(
-        face = "bold",
-        size = rel(1.2), hjust = 0.5, margin = margin(0, 0, 20, 0)
-      ),
-      text = element_text(),
-      panel.background = element_rect(colour = NA),
-      plot.background = element_rect(colour = NA),
-      panel.border = element_rect(colour = NA),
-      axis.title = element_text(face = "bold", size = rel(1)),
-      axis.title.y = element_text(angle = 90, vjust = 2),
-      axis.title.x = element_text(vjust = -0.2),
-      axis.text = element_text(),
-      axis.line.x = element_line(colour = "black"),
-      axis.line.y = element_line(colour = "black"),
-      axis.ticks = element_line(),
-      panel.grid.major = element_line(colour = "#f0f0f0"),
-      panel.grid.minor = element_blank(),
-      legend.key = element_rect(colour = NA),
-      legend.position = "bottom",
-      legend.direction = "horizontal",
-      legend.box = "vetical",
-      legend.key.size = unit(0.5, "cm"),
-      # legend.margin = unit(0, "cm"),
-      legend.title = element_text(face = "italic"),
-      plot.margin = unit(c(10, 5, 5, 5), "mm"),
-      strip.background = element_rect(colour = "#f0f0f0", fill = "#f0f0f0"),
-      strip.text = element_text(face = "bold")
-    ))
-}
-
-scale_fill_Publication <- function(...) {
-  library(scales)
-  discrete_scale("fill", "Publication", manual_pal(values = c("#386cb0", "#f87f01", "#7fc97f", "#ef3b2c", "#feca01", "#a6cee3", "#fb9a99", "#984ea3", "#8C591D")), ...)
-}
-
-scale_colour_Publication <- function(...) {
-  library(scales)
-  discrete_scale("colour", "Publication", manual_pal(values = c("#386cb0", "#f87f01", "#7fc97f", "#ef3b2c", "#feca01", "#a6cee3", "#fb9a99", "#984ea3", "#8C591D")), ...)
-}
 
 # Tautan ----
 tautan_apl_lain <- tags$a(
@@ -307,6 +263,31 @@ ui <- page_navbar(
                 ),
                 selected = "Total (Rp)"
               ),
+              hr(),
+              selectInput(
+                "warna_dep",
+                "Warna:",
+                choices = c(
+                  "-",
+                  "Setoran Awal (Rp)",
+                  "Periode (Tahun)",
+                  "Bunga Per Tahun (%)",
+                  "Total (Rp)"
+                ),
+                selected = "-"
+              ),
+              selectInput(
+                "facet_dep",
+                "Sisi:",
+                choices = c(
+                  "-",
+                  "Setoran Awal (Rp)",
+                  "Periode (Tahun)",
+                  "Bunga Per Tahun (%)",
+                  "Total (Rp)"
+                ),
+                selected = "-"
+              ),
               placement = c("auto")
             )
           ),
@@ -373,6 +354,31 @@ ui <- page_navbar(
                   "Total (Rp)"
                 ),
                 selected = "Total (Rp)"
+              ),
+              hr(),
+              selectInput(
+                "warna",
+                "Warna:",
+                choices = c(
+                  "-",
+                  "Setoran Bulanan (Rp)",
+                  "Periode (Bulan)",
+                  "Bunga Per Tahun (%)",
+                  "Total (Rp)"
+                ),
+                selected = "-"
+              ),
+              selectInput(
+                "facet",
+                "Sisi:",
+                choices = c(
+                  "-",
+                  "Setoran Bulanan (Rp)",
+                  "Periode (Bulan)",
+                  "Bunga Per Tahun (%)",
+                  "Total (Rp)"
+                ),
+                selected = "-"
               ),
               placement = c("auto")
             )
@@ -443,6 +449,21 @@ ui <- page_navbar(
     nav_item(tautan_github),
     icon = shiny::icon("link"),
     align = "right"
+  ),
+  tags$head(
+    HTML('
+      <!-- Google tag (gtag.js) -->
+      <script async src="https://www.googletagmanager.com/gtag/js?id=G-XWLYNEVE4J"></script>
+    '),
+    HTML("
+      <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+      
+        gtag('config', 'G-XWLYNEVE4J');
+      </script>
+    ")
   )
 )
 
@@ -779,16 +800,64 @@ server <- function(input, output, session) {
   output$grafik_data_dep <- renderPlot({
     x <- as.character(input$sumbu_x_dep)
     y <- as.character(input$sumbu_y_dep)
-    tabel_data_dep() %>%
+    warna <- as.character(input$warna_dep)
+    facet <- as.character(input$facet_dep)
+    
+    plot_awal <- tabel_data_dep() %>%
       ggplot(aes(.data[[x]], .data[[y]])) +
-      geom_point(
-        size = 5,
-        color = "#386cb0"
-      ) +
-      theme_Publication() +
+      theme_bw(base_size = 16) +
       labs(
         title = paste0("Hubungan Antara ", x, " dan ", y)
+      ) +
+      theme(
+        plot.title = element_text(
+          face = "bold",
+          hjust = .5
+        )
       )
+    plot_baru <- if (warna == "-" & facet == "-") {
+      plot_awal +
+        geom_point(
+          color = "#386cb0",
+          size = 5
+        )
+    } else if (warna != "-" & facet == "-") {
+      plot_awal +
+        geom_point(
+          aes(color = .data[[warna]]),
+          size = 5
+        ) +
+        scale_color_viridis_b() +
+        theme(
+          legend.position = "right"
+        )
+    } else if (warna == "-" & facet != "-") {
+      plot_awal +
+        geom_point(
+          color = "#386cb0",
+          size = 5
+        ) +
+        facet_grid(
+          ~factor(.data[[facet]])
+        )
+    } else {
+      plot_awal +
+        geom_point(
+          aes(
+            color = .data[[warna]]
+          ),
+          size = 5
+        ) +
+        scale_color_viridis_b() +
+        facet_grid(
+          ~factor(.data[[facet]])
+        ) +
+        theme(
+          legend.position = "bottom"
+        )
+    }
+    
+    plot_baru
   })
 
   ## Tabungan berjangka ----
@@ -1042,16 +1111,62 @@ server <- function(input, output, session) {
   output$grafik_data <- renderPlot({
     x <- as.character(input$sumbu_x)
     y <- as.character(input$sumbu_y)
-    tabel_data() %>%
+    warna <- as.character(input$warna)
+    facet <- as.character(input$facet)
+    
+    plot_awal <- tabel_data() %>%
       ggplot(aes(.data[[x]], .data[[y]])) +
-      geom_point(
-        size = 5,
-        color = "#386cb0"
-      ) +
-      theme_Publication() +
+      theme_bw(base_size = 16) +
       labs(
         title = paste0("Hubungan Antara ", x, " dan ", y)
+      ) +
+      theme(
+        plot.title = element_text(
+          face = "bold",
+          hjust = .5
+        )
       )
+    plot_baru <- if (warna == "-" & facet == "-") {
+      plot_awal +
+        geom_point(
+          size = 5
+        )
+    } else if (warna != "-" & facet == "-") {
+      plot_awal +
+        geom_point(
+          aes(color = .data[[warna]]),
+          size = 5
+        ) +
+        scale_color_viridis_b() +
+        theme(
+          legend.position = "right"
+        )
+    } else if (warna == "-" & facet != "-") {
+      plot_awal +
+        geom_point(
+          size = 5
+        ) +
+        facet_grid(
+          ~factor(.data[[facet]])
+        )
+    } else {
+      plot_awal +
+        geom_point(
+          aes(
+            color = .data[[warna]]
+          ),
+          size = 5
+        ) +
+        scale_color_viridis_b() +
+        facet_grid(
+          ~factor(.data[[facet]])
+        ) +
+        theme(
+          legend.position = "bottom"
+        )
+    }
+    
+    plot_baru
   })
 }
 
