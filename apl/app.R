@@ -435,7 +435,8 @@ ui <- page_navbar(
         ),
         nav_panel(
           title = "Tabungan Berjangka",
-          p("Tabungan berjangka merupakan tabungan/simpanan yang memungkinkan nasabah menabung secara rutin dalam jangka waktu tertentu. Tabungan berjangka ini merupakan bagian dari ", a("anuitas.", href = "https://kbbi.kemdikbud.go.id/entri/anuitas", target = "_blank"), " Dalam aplikasi ini, tabungan berjangka tersebut menganggap bahwa nasabah melakukan setoran dengan besaran yang sama setiap bulannya."),
+          p("Tabungan berjangka merupakan tabungan/simpanan yang memungkinkan nasabah menabung secara rutin dalam jangka waktu tertentu. Tabungan berjangka ini merupakan bagian dari ", a("anuitas.", href = "https://kbbi.kemdikbud.go.id/entri/anuitas", target = "_blank")),
+          p("Dalam aplikasi ini, tabungan berjangka tersebut menganggap bahwa nasabah melakukan setoran dengan besaran yang sama di setiap akhir bulannya. Setoran pertama dilakukan pada bulan pertama. Setoran akhir dilakukan pada tanggal yang sama dengan tanggal berakhirnya tabungan berjangka tersebut."),
           p("Misalnya seorang nasabah melakukan setoran sejumlah \\(R\\) secara rutin sebanyak \\(n\\) kali kepada bank yang memberikan bunga \\(i\\) per periode waktu tertentu. Jumlah tabungan akhirnya dapat ditentukan dengan rumus berikut."),
           p("$$A_f=R\\frac{(1+i)^n-1}{i}$$")
         )
@@ -877,7 +878,7 @@ server <- function(input, output, session) {
       nilai_periode <- ifelse(
         i != 0,
         round(log((A * i + R) / R, base = 1 + i), 1),
-        A / R
+        round(A / R, 1)
       )
     } else {
       nilai_periode <- n
@@ -906,10 +907,14 @@ server <- function(input, output, session) {
     } else {
       "secondary"
     }
-    nilai_setoran <- if (jenis_simulasi == "setor_bulanan") {
-      A * i / ((1 + i)^n - 1)
+    if (jenis_simulasi == "setor_bulanan") {
+      nilai_setoran <- ifelse(
+        i != 0,
+        A * i / ((1 + i)^n - 1),
+        A / n
+      )
     } else {
-      R
+      nilai_setoran <- R
     }
     setoran_simpel <- if (nilai_setoran < 1e+3) {
       round(nilai_setoran, 2)
@@ -962,10 +967,14 @@ server <- function(input, output, session) {
     } else {
       "secondary"
     }
-    nilai_total <- if (jenis_simulasi == "total") {
-      R * ((1 + i)^n - 1) / i
+    if (jenis_simulasi == "total") {
+      nilai_total <- ifelse(
+        i != 0,
+        R * ((1 + i)^n - 1) / i,
+        n * R
+      )
     } else {
-      A
+      nilai_total <- A
     }
     total_simpel <- if (nilai_total < 1e+3) {
       round(nilai_total, 2)
@@ -1030,18 +1039,26 @@ server <- function(input, output, session) {
       nilai_periode <- ifelse(
         i != 0,
         ceiling(log((A * i + R) / R, base = 1 + i)),
-        A / R
+        ceiling(A / R)
       )
       nilai_setoran <- R
       nilai_bunga <- 1200 * i
       nilai_total <- A
     } else if (jenis_simulasi == "setor_bulanan") {
-      nilai_setoran <- round(A * i / ((1 + i)^n - 1), 2)
+      nilai_setoran <- ifelse(
+        i != 0,
+        round(A * i / ((1 + i)^n - 1), 2),
+        round(A / n, 2)
+      )
       nilai_periode <- n
       nilai_bunga <- 1200 * i
       nilai_total <- A
     } else {
-      nilai_total <- round(R * ((1 + i)^n - 1) / i, 2)
+      nilai_total <- ifelse(
+        i != 0,
+        round(R * ((1 + i)^n - 1) / i, 2),
+        n * R
+      )
       nilai_periode <- n
       nilai_setoran <- R
       nilai_bunga <- 1200 * i
