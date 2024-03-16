@@ -82,7 +82,7 @@ ui <- page_navbar(
           "bunga_dep",
           div("Bunga Per Tahun (%)", style = "font-weight: bold;"),
           min = 0,
-          max = 10,
+          max = 12,
           value = 4,
           step = .1,
           ticks = FALSE,
@@ -157,7 +157,7 @@ ui <- page_navbar(
         "bunga",
         div("Bunga Per Tahun (%)", style = "font-weight: bold;"),
         min = 0,
-        max = 10,
+        max = 12,
         value = 2.5,
         step = .1,
         ticks = FALSE,
@@ -245,6 +245,7 @@ ui <- page_navbar(
                 "sumbu_x_dep",
                 "Sumbu x:",
                 choices = c(
+                  "Penghitungan Bunga",
                   "Setoran Awal (Rp)",
                   "Periode (Tahun)",
                   "Bunga Per Tahun (%)",
@@ -256,6 +257,7 @@ ui <- page_navbar(
                 "sumbu_y_dep",
                 "Sumbu y:",
                 choices = c(
+                  "Penghitungan Bunga",
                   "Setoran Awal (Rp)",
                   "Periode (Tahun)",
                   "Bunga Per Tahun (%)",
@@ -269,6 +271,7 @@ ui <- page_navbar(
                 "Warna:",
                 choices = c(
                   "-",
+                  "Penghitungan Bunga",
                   "Setoran Awal (Rp)",
                   "Periode (Tahun)",
                   "Bunga Per Tahun (%)",
@@ -281,6 +284,7 @@ ui <- page_navbar(
                 "Sisi:",
                 choices = c(
                   "-",
+                  "Penghitungan Bunga",
                   "Setoran Awal (Rp)",
                   "Periode (Tahun)",
                   "Bunga Per Tahun (%)",
@@ -436,9 +440,9 @@ ui <- page_navbar(
         nav_panel(
           title = "Tabungan Berjangka",
           p("Tabungan berjangka merupakan tabungan/simpanan yang memungkinkan nasabah menabung secara rutin dalam jangka waktu tertentu. Tabungan berjangka ini merupakan bagian dari ", a("anuitas.", href = "https://kbbi.kemdikbud.go.id/entri/anuitas", target = "_blank")),
-          p("Dalam aplikasi ini, tabungan berjangka tersebut menganggap bahwa nasabah melakukan setoran dengan besaran yang sama di setiap akhir bulannya. Setoran pertama dilakukan pada bulan pertama. Setoran akhir dilakukan pada tanggal yang sama dengan tanggal berakhirnya tabungan berjangka tersebut."),
           p("Misalnya seorang nasabah melakukan setoran sejumlah \\(R\\) secara rutin sebanyak \\(n\\) kali kepada bank yang memberikan bunga \\(i\\) per periode waktu tertentu. Jumlah tabungan akhirnya dapat ditentukan dengan rumus berikut."),
-          p("$$A_f=R\\frac{(1+i)^n-1}{i}$$")
+          p("$$A_f=R\\frac{(1+i)^n-1}{i}$$"),
+          p("Dalam aplikasi ini, tabungan berjangka tersebut menganggap bahwa nasabah melakukan setoran dengan besaran yang sama di setiap akhir bulannya. Setoran pertama dilakukan pada bulan pertama. Setoran akhir dilakukan pada tanggal yang sama dengan tanggal berakhirnya tabungan berjangka tersebut.")
         )
       )
     )
@@ -679,6 +683,7 @@ server <- function(input, output, session) {
   ### Awal tabel_data_dep ----
   tabel_data_dep <- reactiveVal(
     tibble(
+      `Penghitungan Bunga` = character(),
       `Setoran Awal (Rp)` = numeric(),
       `Periode (Tahun)` = numeric(),
       `Bunga Per Tahun (%)` = numeric(),
@@ -688,10 +693,30 @@ server <- function(input, output, session) {
   ### Membuat baris tabel ----
   observeEvent(input$simpan_dep, {
     jenis_simulasi <- input$jenis_simulasi_dep
+    hitung_bunga <- input$hitung_bunga_dep
+    hitungan_bunga <- ifelse(
+      hitung_bunga == "1", "Tahunan",
+      ifelse(
+        hitung_bunga == "2", "Semesteran",
+        ifelse(
+          hitung_bunga == "3", "Caturwulanan",
+          ifelse(
+            hitung_bunga == "4", "Triwulanan",
+            ifelse(
+              hitung_bunga == "6", "Dua bulanan",
+              ifelse(
+                hitung_bunga == "12", "Bulanan",
+                "Kontinu"
+              )
+            )
+          )
+        )
+      )
+    )
     n <- ifelse(
-      input$hitung_bunga_dep != "kontinu",
-      as.numeric(input$hitung_bunga_dep),
-      input$hitung_bunga_dep
+      hitung_bunga != "kontinu",
+      as.numeric(hitung_bunga),
+      hitung_bunga
     )
     P <- input$setor_awal_dep
     t <- input$periode_dep
@@ -738,6 +763,7 @@ server <- function(input, output, session) {
 
     tabel_data_dep() %>%
       add_row(
+        `Penghitungan Bunga` = hitungan_bunga,
         `Setoran Awal (Rp)` = nilai_setor_awal,
         `Periode (Tahun)` = nilai_periode,
         `Bunga Per Tahun (%)` = nilai_bunga,
@@ -750,6 +776,7 @@ server <- function(input, output, session) {
   observeEvent(input$hapus_dep, {
     tabel_data_dep(
       tibble(
+        `Penghitungan Bunga` = character(),
         `Setoran Awal (Rp)` = numeric(),
         `Periode (Tahun)` = numeric(),
         `Bunga Per Tahun (%)` = numeric(),
@@ -762,6 +789,7 @@ server <- function(input, output, session) {
   output$tabel_data_dep <- renderTable(
     tabel_data_dep() %>%
       mutate(
+        `Penghitungan Bunga` = as.factor(`Penghitungan Bunga`),
         `Setoran Awal (Rp)` = formatC(
           `Setoran Awal (Rp)`,
           format = "f",
@@ -822,13 +850,23 @@ server <- function(input, output, session) {
           color = "#386cb0",
           size = 5
         )
-    } else if (warna != "-" & facet == "-") {
+    } else if (warna != "-" & warna != "Penghitungan Bunga" & facet == "-") {
       plot_awal +
         geom_point(
           aes(color = .data[[warna]]),
           size = 5
         ) +
         scale_color_viridis_b() +
+        theme(
+          legend.position = "right"
+        )
+    } else if (warna == "Penghitungan Bunga" & facet == "-") {
+      plot_awal +
+        geom_point(
+          aes(color = .data[[warna]]),
+          size = 5
+        ) +
+        scale_color_viridis_d() +
         theme(
           legend.position = "right"
         )
@@ -840,6 +878,21 @@ server <- function(input, output, session) {
         ) +
         facet_grid(
           ~factor(.data[[facet]])
+        )
+    } else if (warna == "Penghitungan Bunga" & facet != "-") {
+      plot_awal +
+        geom_point(
+          aes(
+            color = .data[[warna]]
+          ),
+          size = 5
+        ) +
+        scale_color_viridis_d() +
+        facet_grid(
+          ~factor(.data[[facet]])
+        ) +
+        theme(
+          legend.position = "bottom"
         )
     } else {
       plot_awal +
